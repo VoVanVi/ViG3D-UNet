@@ -1,0 +1,20 @@
+exp_name: brats_dummy
+output_dir: runs
+seed: 42
+
+data:
+  train_size: 4
+  val_size: 2
+  batch_size: 2
+  num_workers: 0
+  shape: [4, 16, 16, 16]
+
+model:
+  in_channels: 4
+  out_channels: 3
+  feature_channels: 8
+
+train:
+  epochs: 1
+  lr: 0.001
+  dry_run: true

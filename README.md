@@ -38,5 +38,14 @@ IEEE Journal of Biomedical and Health Informatics (https://ieeexplore.ieee.org/d
 
 Some insights about 3D CNN module is originated from [nnUNet](https://github.com/MIC-DKFZ/nnUNet) and the 3D Vision GNN(ViG3D) module is originated from [Vision GNN](https://github.com/huawei-noah/Efficient-AI-Backbones).
 
+## BraTS Experiments (WIP)
+The BraTS workflow is under active development with config-driven training runs. Use the dry-run config to verify the pipeline and output layout:
+
+```bash
+python -m src.train --config configs/brats/dry_run.yaml
+```
+
+The dry run writes a run folder under `runs/<exp_name>/<timestamp>/` with a config copy, environment info, and logs. It will log a single batch shape and exit.
+
 ## Citation
 If you find this repository/work helpful in your research, welcome to cite these papers and give a ⭐.
