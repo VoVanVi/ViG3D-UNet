@@ -4,7 +4,7 @@ import json
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import torch
 import torch.nn as nn
@@ -45,7 +45,7 @@ def get_git_commit() -> str:
         return "unknown"
 
 
-def write_metrics(path: Path, rows: list[Dict[str, float]]) -> None:
+def write_metrics(path: Path, rows: List[Dict[str, float]]) -> None:
     if not rows:
         return
     with path.open("w", newline="") as handle:
@@ -108,6 +108,7 @@ def main() -> None:
     log_environment(logger, run_dir / "env.txt", json.dumps(env_info, indent=2))
 
     data_cfg = config.get("data", {})
+    dataset_type = data_cfg.get("type", "dummy")
     train_size = int(data_cfg.get("train_size", 4))
     val_size = int(data_cfg.get("val_size", 2))
     batch_size = int(data_cfg.get("batch_size", 2))
@@ -119,8 +120,29 @@ def main() -> None:
     out_channels = int(model_cfg.get("out_channels", 3))
     feature_channels = int(model_cfg.get("feature_channels", 8))
 
-    train_dataset = RandomVolumeDataset(train_size, in_shape, out_channels)
-    val_dataset = RandomVolumeDataset(val_size, in_shape, out_channels)
+    if dataset_type == "brats_npy":
+        from src.data.brats_dataset import BratsNpyDataset
+
+        data_root = Path(data_cfg.get("data_root", "data/brats"))
+        train_images = Path(data_cfg.get("train_images", data_root / "train" / "images"))
+        train_labels = Path(data_cfg.get("train_labels", data_root / "train" / "labels"))
+        val_images = Path(data_cfg.get("val_images", data_root / "val" / "images"))
+        val_labels = Path(data_cfg.get("val_labels", data_root / "val" / "labels"))
+        train_dataset = BratsNpyDataset(train_images, train_labels)
+        val_dataset = BratsNpyDataset(val_images, val_labels)
+    elif dataset_type == "brats_nifti":
+        from src.data.brats_dataset import BratsNiftiDataset
+
+        data_root = Path(data_cfg.get("data_root", "data/brats_nifti"))
+        train_split = Path(data_cfg.get("train_split", data_root / "train.txt"))
+        val_split = Path(data_cfg.get("val_split", data_root / "val.txt"))
+        modalities = data_cfg.get("modalities", ["t1", "t1ce", "t2", "flair"])
+        label_suffix = data_cfg.get("label_suffix", "seg")
+        train_dataset = BratsNiftiDataset(data_root, train_split, modalities, label_suffix)
+        val_dataset = BratsNiftiDataset(data_root, val_split, modalities, label_suffix)
+    else:
+        train_dataset = RandomVolumeDataset(train_size, in_shape, out_channels)
+        val_dataset = RandomVolumeDataset(val_size, in_shape, out_channels)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
@@ -135,7 +157,7 @@ def main() -> None:
         return
 
     epochs = int(config.get("train", {}).get("epochs", 1))
-    metrics_rows: list[Dict[str, float]] = []
+    metrics_rows: List[Dict[str, float]] = []
     best_val = float("inf")
     for epoch in range(1, epochs + 1):
         train_loss = train_one_epoch(model, train_loader, optimizer)
