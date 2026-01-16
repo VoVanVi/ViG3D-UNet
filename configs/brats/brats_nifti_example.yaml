@@ -1,0 +1,23 @@
+exp_name: brats_nifti_sanity
+output_dir: runs
+seed: 42
+
+data:
+  type: brats_nifti
+  data_root: /home/gpuadmin/Desktop/Kim/TextBraTS/data/TextBraTSData
+  train_split: /home/gpuadmin/Desktop/Kim/TextBraTS/data/train_20.txt
+  val_split: /home/gpuadmin/Desktop/Kim/TextBraTS/data/val_20.txt
+  modalities: [t1, t1ce, t2, flair]
+  label_suffix: seg
+  batch_size: 1
+  num_workers: 0
+
+model:
+  in_channels: 4
+  out_channels: 4
+  feature_channels: 8
+
+train:
+  epochs: 1
+  lr: 0.001
+  dry_run: true

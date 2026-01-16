@@ -1,0 +1,23 @@
+exp_name: brats_data_sanity
+output_dir: runs
+seed: 42
+
+data:
+  type: brats_npy
+  data_root: data/brats_npy
+  train_images: data/brats_npy/train/images
+  train_labels: data/brats_npy/train/labels
+  val_images: data/brats_npy/val/images
+  val_labels: data/brats_npy/val/labels
+  batch_size: 1
+  num_workers: 0
+
+model:
+  in_channels: 4
+  out_channels: 4
+  feature_channels: 8
+
+train:
+  epochs: 1
+  lr: 0.001
+  dry_run: true
