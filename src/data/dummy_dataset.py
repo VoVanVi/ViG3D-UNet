@@ -9,11 +9,11 @@ class RandomVolumeDataset(Dataset):
         self,
         size: int,
         in_shape: Tuple[int, int, int, int],
-        out_channels: int,
+        num_classes: int,
     ) -> None:
         self.size = size
         self.in_shape = in_shape
-        self.out_channels = out_channels
+        self.num_classes = num_classes
 
     def __len__(self) -> int:
         return self.size
@@ -21,5 +21,5 @@ class RandomVolumeDataset(Dataset):
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         channels, depth, height, width = self.in_shape
         x = torch.randn(channels, depth, height, width)
-        y = torch.randn(self.out_channels, depth, height, width)
+        y = torch.randint(0, self.num_classes, (depth, height, width))
         return x, y

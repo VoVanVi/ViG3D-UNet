@@ -85,5 +85,8 @@ Split files should list case directory names (one per line), e.g. `BraTS20_Train
 python -m src.train --config configs/brats/brats_nifti_example.yaml
 ```
 
+### Step 3: Loss + metrics (baseline)
+The training loop now uses multiclass Dice + Cross Entropy loss and logs Dice per class plus mean Dice. Dry-run logs the computed loss and mean Dice for a single batch.
+
 ## Citation
 If you find this repository/work helpful in your research, welcome to cite these papers and give a ⭐.
