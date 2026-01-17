@@ -7,3 +7,4 @@
 - Add a BraTS NIfTI dataset loader and example config that uses split files.
 - Add Dice + Cross Entropy loss and per-class Dice metrics for multiclass training.
 - Support `.nii` extensions and absolute case paths in the BraTS NIfTI loader.
+- Normalize split entries that include the dataset root folder name and silence git hash warnings.

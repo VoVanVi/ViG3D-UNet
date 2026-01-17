@@ -41,7 +41,9 @@ def build_dummy_model(in_channels: int, out_channels: int, feature_channels: int
 
 def get_git_commit() -> str:
     try:
-        return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
     except subprocess.SubprocessError:
         return "unknown"
 

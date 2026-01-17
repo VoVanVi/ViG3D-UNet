@@ -83,7 +83,11 @@ class BratsNiftiDataset(Dataset):
         if entry_path.is_absolute():
             case_dir = entry_path
         else:
-            case_dir = self.data_root / case_entry
+            if entry_path.parts and entry_path.parts[0] == self.data_root.name:
+                entry_path = Path(*entry_path.parts[1:])
+            case_dir = self.data_root / entry_path
+            if not case_dir.exists():
+                case_dir = self.data_root / entry_path.name
         case_id = case_dir.name
         return case_dir, case_id
 
