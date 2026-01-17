@@ -51,6 +51,7 @@ class BratsNiftiDataset(Dataset):
         split_file: Path,
         modalities: Sequence[str] = ("t1", "t1ce", "t2", "flair"),
         label_suffix: str = "seg",
+        extensions: Sequence[str] = (".nii.gz", ".nii"),
         eps: float = 1e-6,
     ) -> None:
         try:
@@ -63,6 +64,7 @@ class BratsNiftiDataset(Dataset):
         self.split_file = Path(split_file)
         self.modalities = list(modalities)
         self.label_suffix = label_suffix
+        self.extensions = list(extensions)
         self.eps = eps
         self.case_ids = self._load_case_ids()
         if not self.case_ids:
@@ -76,6 +78,22 @@ class BratsNiftiDataset(Dataset):
     def __len__(self) -> int:
         return len(self.case_ids)
 
+    def _resolve_case_dir(self, case_entry: str) -> Tuple[Path, str]:
+        entry_path = Path(case_entry)
+        if entry_path.is_absolute():
+            case_dir = entry_path
+        else:
+            case_dir = self.data_root / case_entry
+        case_id = case_dir.name
+        return case_dir, case_id
+
+    def _find_nifti(self, case_dir: Path, basename: str) -> Path:
+        for ext in self.extensions:
+            candidate = case_dir / f"{basename}{ext}"
+            if candidate.exists():
+                return candidate
+        raise FileNotFoundError(f"Missing file for {basename} with extensions {self.extensions}")
+
     def _load_nifti(self, path: Path) -> np.ndarray:
         if not path.exists():
             raise FileNotFoundError(f"Missing file: {path}")
@@ -87,15 +105,17 @@ class BratsNiftiDataset(Dataset):
         return (volume - mean) / (std + self.eps)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        case_id = self.case_ids[idx]
-        case_dir = self.data_root / case_id
+        case_entry = self.case_ids[idx]
+        case_dir, case_id = self._resolve_case_dir(case_entry)
         channels = []
         for modality in self.modalities:
-            path = case_dir / f"{case_id}_{modality}.nii.gz"
+            basename = f"{case_id}_{modality}"
+            path = self._find_nifti(case_dir, basename)
             channels.append(self._normalize(self._load_nifti(path)))
         image = np.stack(channels, axis=0)
 
-        label_path = case_dir / f"{case_id}_{self.label_suffix}.nii.gz"
+        label_basename = f"{case_id}_{self.label_suffix}"
+        label_path = self._find_nifti(case_dir, label_basename)
         label = self._load_nifti(label_path)
         if label.ndim != 3:
             raise ValueError(f"Expected label shape (D,H,W), got {label.shape}")

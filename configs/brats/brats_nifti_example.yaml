@@ -9,6 +9,7 @@ data:
   val_split: /home/gpuadmin/Desktop/Kim/TextBraTS/data/val_20.txt
   modalities: [t1, t1ce, t2, flair]
   label_suffix: seg
+  extensions: [".nii", ".nii.gz"]
   batch_size: 1
   num_workers: 0
 

@@ -79,7 +79,7 @@ For native BraTS NIfTI folders (e.g., `BraTS20_Training_001`), the dataset loade
 - `BraTS20_Training_001_flair.nii.gz`
 - `BraTS20_Training_001_seg.nii.gz`
 
-Split files should list case directory names (one per line), e.g. `BraTS20_Training_001`. Run a dry-run sanity check with:
+Split files should list case directory names (one per line), e.g. `BraTS20_Training_001`. Absolute case paths are also supported. Both `.nii.gz` and `.nii` extensions are supported by default. Run a dry-run sanity check with:
 
 ```bash
 python -m src.train --config configs/brats/brats_nifti_example.yaml
