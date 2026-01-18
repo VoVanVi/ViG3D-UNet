@@ -99,5 +99,14 @@ python -m src.train --config configs/brats/a0_vig3d_only.yaml
 
 Expected output: a run directory under `runs/brats_a0_vig3d_only/<timestamp>/` containing `config.yaml`, `env.txt`, `train_log.txt`, and (if not dry-run) checkpoints + metrics.
 
+### Step 5: A1 ViG3D encoder + UNet decoder
+Run the A1 ablation (ViG3D encoder with UNet-style decoder) with:
+
+```bash
+python -m src.train --config configs/brats/a1_vig3d_enc_unet_dec.yaml
+```
+
+To benchmark actual performance, set `train.dry_run: false`, point `data.type` to your NIfTI or NPY dataset config, and increase `train.epochs`. Inspect `runs/<exp_name>/<timestamp>/metrics.csv` for training/validation loss and Dice.
+
 ## Citation
 If you find this repository/work helpful in your research, welcome to cite these papers and give a ⭐.
