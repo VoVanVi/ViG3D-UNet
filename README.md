@@ -23,14 +23,44 @@ IEEE Journal of Biomedical and Health Informatics (https://ieeexplore.ieee.org/d
 
 ## How to use ViG3D-UNet(To be done...)
 ### 1. Requirements
+- Python 3.8+
+- PyTorch, PyYAML, nibabel, numpy (see `requirements.txt`)
 
 ### 2. Installation
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
 ### 3. Inference
+Inference utilities are still under development (WIP).
 
-### 4.Training
+### 4. Training (BraTS WIP)
+Run a single experiment with a config:
 
-### 5.Evaluation
+```bash
+python -m src.train --config configs/brats/a0_vig3d_only.yaml
+```
+
+Use `configs/brats/brats_nifti_example.yaml` or `configs/brats/data_example.yaml` to point at your dataset.
+
+### 5. Evaluation
+Metrics are written to `runs/<exp_name>/<timestamp>/metrics.csv`.
+
+### Ablation study guide (Step 9)
+Run a sweep over multiple configs and collect a summary CSV:
+
+```bash
+python -m src.experiments.sweep --configs \
+  configs/brats/a0_vig3d_only.yaml \
+  configs/brats/a1_vig3d_enc_unet_dec.yaml \
+  configs/brats/a2_cnn_vig_concat.yaml \
+  configs/brats/a3_cnn_vig_attn.yaml \
+  configs/brats/a4_full_paperclip.yaml
+```
+
+The summary is saved to `runs/sweep_summary.csv` by default.
 
 
 ## Contributions
