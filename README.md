@@ -117,5 +117,14 @@ python -m src.train --config configs/brats/a2_cnn_vig_concat.yaml
 
 Expected output: a run directory under `runs/brats_a2_cnn_vig_concat/<timestamp>/` with logs and (if not dry-run) metrics/checkpoints.
 
+### Step 7: A3 CNN encoder + ViG3D encoder (channel attention fusion)
+Run the A3 ablation (CNN+ViG3D with channel attention fusion) with:
+
+```bash
+python -m src.train --config configs/brats/a3_cnn_vig_attn.yaml
+```
+
+Expected output: a run directory under `runs/brats_a3_cnn_vig_attn/<timestamp>/` with logs and (if not dry-run) metrics/checkpoints.
+
 ## Citation
 If you find this repository/work helpful in your research, welcome to cite these papers and give a ⭐.
