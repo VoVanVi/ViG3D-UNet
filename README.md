@@ -44,6 +44,13 @@ python -m src.train --config configs/brats/a0_vig3d_only.yaml
 ```
 
 Use `configs/brats/brats_nifti_example.yaml` or `configs/brats/data_example.yaml` to point at your dataset.
+To use multiple GPUs, set a `runtime` block in your config:
+
+```yaml
+runtime:
+  device: cuda
+  gpu_ids: [0, 1]
+```
 
 ### 5. Evaluation
 Metrics are written to `runs/<exp_name>/<timestamp>/metrics.csv`.

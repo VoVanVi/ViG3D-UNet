@@ -64,10 +64,13 @@ def train_one_epoch(
     optimizer: torch.optim.Optimizer,
     criterion: nn.Module,
     num_classes: int,
+    device: torch.device,
 ) -> float:
     model.train()
     total_loss = 0.0
     for x, y in loader:
+        x = x.to(device)
+        y = y.to(device)
         optimizer.zero_grad()
         preds = model(x)
         loss = criterion(preds, y) + dice_loss(preds, y, num_classes)
@@ -82,12 +85,15 @@ def validate(
     loader: DataLoader,
     criterion: nn.Module,
     num_classes: int,
+    device: torch.device,
 ) -> Dict[str, float]:
     model.eval()
     total_loss = 0.0
     dice_scores = []
     with torch.no_grad():
         for x, y in loader:
+            x = x.to(device)
+            y = y.to(device)
             preds = model(x)
             loss = criterion(preds, y) + dice_loss(preds, y, num_classes)
             total_loss += loss.item()
@@ -176,15 +182,24 @@ def main() -> None:
     train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
 
+    runtime_cfg = config.get("runtime", {})
+    device = torch.device(runtime_cfg.get("device", "cpu"))
+    gpu_ids = runtime_cfg.get("gpu_ids", [])
+
     if model_cfg.get("type") == "dummy" or "type" not in model_cfg:
         model = build_dummy_model(in_channels, out_channels, feature_channels)
     else:
         model = ModelFactory.create(model_cfg)
+    model = model.to(device)
+    if device.type == "cuda" and gpu_ids:
+        model = nn.DataParallel(model, device_ids=gpu_ids)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(config.get("train", {}).get("lr", 1e-3)))
     criterion = nn.CrossEntropyLoss()
 
     if args.dry_run or config.get("train", {}).get("dry_run", False):
         x, y = next(iter(train_loader))
+        x = x.to(device)
+        y = y.to(device)
         preds = model(x)
         loss = criterion(preds, y) + dice_loss(preds, y, num_classes)
         dice_scores = dice_per_class(preds, y, num_classes)
@@ -200,8 +215,8 @@ def main() -> None:
     metrics_rows: List[Dict[str, float]] = []
     best_val = float("inf")
     for epoch in range(1, epochs + 1):
-        train_loss = train_one_epoch(model, train_loader, optimizer, criterion, num_classes)
-        val_metrics = validate(model, val_loader, criterion, num_classes)
+        train_loss = train_one_epoch(model, train_loader, optimizer, criterion, num_classes, device)
+        val_metrics = validate(model, val_loader, criterion, num_classes, device)
         metrics_row = {"epoch": epoch, "train_loss": train_loss}
         metrics_row.update(val_metrics)
         metrics_rows.append(metrics_row)

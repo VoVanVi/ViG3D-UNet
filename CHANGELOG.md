@@ -15,3 +15,4 @@
 - Add a CNN+ViG3D channel attention fusion (A3) with a config-driven model switch.
 - Add the full A4 model with channel attention and offset (paperclip) decoder.
 - Add a sweep runner and ablation study guide for aggregating runs.
+- Add runtime device/gpu config support and move batches to the selected device.

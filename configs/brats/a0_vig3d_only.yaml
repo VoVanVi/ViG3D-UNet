@@ -21,3 +21,7 @@ train:
   epochs: 1
   lr: 0.001
   dry_run: true
+
+runtime:
+  device: cuda
+  gpu_ids: [0]
