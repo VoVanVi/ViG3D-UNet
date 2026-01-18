@@ -85,6 +85,8 @@ Split files should list case directory names (one per line), e.g. `BraTS20_Train
 python -m src.train --config configs/brats/brats_nifti_example.yaml
 ```
 
+BraTS labels are commonly encoded as 0/1/2/4. The loader maps label 4 -> 3 by default so you can train with `num_classes: 4` without out-of-bounds errors. This can be overridden with `data.label_mapping` in the config.
+
 ### Step 3: Loss + metrics (baseline)
 The training loop now uses multiclass Dice + Cross Entropy loss and logs Dice per class plus mean Dice. Dry-run logs the computed loss and mean Dice for a single batch.
 

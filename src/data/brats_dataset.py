@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -52,6 +52,7 @@ class BratsNiftiDataset(Dataset):
         modalities: Sequence[str] = ("t1", "t1ce", "t2", "flair"),
         label_suffix: str = "seg",
         extensions: Sequence[str] = (".nii.gz", ".nii"),
+        label_mapping: Optional[Dict[int, int]] = None,
         eps: float = 1e-6,
     ) -> None:
         try:
@@ -65,6 +66,7 @@ class BratsNiftiDataset(Dataset):
         self.modalities = list(modalities)
         self.label_suffix = label_suffix
         self.extensions = list(extensions)
+        self.label_mapping = label_mapping or {4: 3}
         self.eps = eps
         self.case_ids = self._load_case_ids()
         if not self.case_ids:
@@ -123,5 +125,9 @@ class BratsNiftiDataset(Dataset):
         label = self._load_nifti(label_path)
         if label.ndim != 3:
             raise ValueError(f"Expected label shape (D,H,W), got {label.shape}")
+        if self.label_mapping:
+            label = label.astype(np.int32)
+            for src, dst in self.label_mapping.items():
+                label[label == src] = dst
 
         return torch.from_numpy(image), torch.from_numpy(label).long()

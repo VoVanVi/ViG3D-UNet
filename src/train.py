@@ -161,11 +161,12 @@ def main() -> None:
         modalities = data_cfg.get("modalities", ["t1", "t1ce", "t2", "flair"])
         label_suffix = data_cfg.get("label_suffix", "seg")
         extensions = data_cfg.get("extensions", [".nii.gz", ".nii"])
+        label_mapping = data_cfg.get("label_mapping", {4: 3})
         train_dataset = BratsNiftiDataset(
-            data_root, train_split, modalities, label_suffix, extensions
+            data_root, train_split, modalities, label_suffix, extensions, label_mapping
         )
         val_dataset = BratsNiftiDataset(
-            data_root, val_split, modalities, label_suffix, extensions
+            data_root, val_split, modalities, label_suffix, extensions, label_mapping
         )
     else:
         train_dataset = RandomVolumeDataset(train_size, in_shape, num_classes)

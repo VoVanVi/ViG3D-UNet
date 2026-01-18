@@ -10,6 +10,8 @@ data:
   modalities: [t1, t1ce, t2, flair]
   label_suffix: seg
   extensions: [".nii", ".nii.gz"]
+  label_mapping:
+    4: 3
   batch_size: 1
   num_workers: 0
 
