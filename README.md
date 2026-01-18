@@ -126,5 +126,14 @@ python -m src.train --config configs/brats/a3_cnn_vig_attn.yaml
 
 Expected output: a run directory under `runs/brats_a3_cnn_vig_attn/<timestamp>/` with logs and (if not dry-run) metrics/checkpoints.
 
+### Step 8: A4 full model + offset (paperclip) decoder
+Run the A4 ablation (CNN+ViG3D with channel attention + offset decoder) with:
+
+```bash
+python -m src.train --config configs/brats/a4_full_paperclip.yaml
+```
+
+Expected output: a run directory under `runs/brats_a4_full_paperclip/<timestamp>/` with logs and (if not dry-run) metrics/checkpoints.
+
 ## Citation
 If you find this repository/work helpful in your research, welcome to cite these papers and give a ⭐.
