@@ -13,6 +13,7 @@ import yaml
 from torch.utils.data import DataLoader
 
 from src.data.dummy_dataset import RandomVolumeDataset
+from src.models.factory import ModelFactory
 from src.utils.checkpoints import save_checkpoint
 from src.utils.logger import log_environment, setup_logging
 from src.utils.metrics import dice_loss, dice_metrics_as_dict, dice_per_class
@@ -175,7 +176,10 @@ def main() -> None:
     train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
 
-    model = build_dummy_model(in_channels, out_channels, feature_channels)
+    if model_cfg.get("type") == "dummy" or "type" not in model_cfg:
+        model = build_dummy_model(in_channels, out_channels, feature_channels)
+    else:
+        model = ModelFactory.create(model_cfg)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(config.get("train", {}).get("lr", 1e-3)))
     criterion = nn.CrossEntropyLoss()
 

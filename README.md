@@ -90,5 +90,14 @@ BraTS labels are commonly encoded as 0/1/2/4. The loader maps label 4 -> 3 by de
 ### Step 3: Loss + metrics (baseline)
 The training loop now uses multiclass Dice + Cross Entropy loss and logs Dice per class plus mean Dice. Dry-run logs the computed loss and mean Dice for a single batch.
 
+### Step 4: A0 ViG3D-only backbone (graph-only)
+Run the A0 ViG3D-only ablation (graph backbone + 1x1x1 segmentation head) with:
+
+```bash
+python -m src.train --config configs/brats/a0_vig3d_only.yaml
+```
+
+Expected output: a run directory under `runs/brats_a0_vig3d_only/<timestamp>/` containing `config.yaml`, `env.txt`, `train_log.txt`, and (if not dry-run) checkpoints + metrics.
+
 ## Citation
 If you find this repository/work helpful in your research, welcome to cite these papers and give a ⭐.

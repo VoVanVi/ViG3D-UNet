@@ -9,3 +9,4 @@
 - Support `.nii` extensions and absolute case paths in the BraTS NIfTI loader.
 - Normalize split entries that include the dataset root folder name and silence git hash warnings.
 - Map BraTS label 4 -> 3 by default to support 4-class training targets.
+- Add a ViG3D-only A0 model factory path and config-driven ablation entrypoint.
