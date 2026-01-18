@@ -1,9 +1,12 @@
 from typing import Any, Dict, List
 
+import torch
 import torch.nn as nn
 
 from src.models.decoders.unet_decoder import UNetDecoder3d
+from src.models.encoders.cnn_encoder import CNNEncoder3d
 from src.models.encoders.vig3d_encoder import ViG3DBackbone, ViG3DEncoder
+from src.models.fusion.concat_fusion import ConcatFusion
 from src.models.heads.seg_head import SegmentationHead
 
 
@@ -42,5 +45,39 @@ class ModelFactory:
             )
             decoder = UNetDecoder3d([int(c) for c in encoder_channels], num_classes)
             return nn.Sequential(encoder, decoder)
+
+        if model_type == "a2_cnn_vig_concat":
+            in_channels = int(model_cfg.get("in_channels", 4))
+            num_classes = int(model_cfg.get("num_classes", 4))
+            encoder_channels = model_cfg.get("encoder_channels", [16, 32, 64])
+            vig_blocks_per_stage = model_cfg.get("vig_blocks_per_stage", [1, 1, 1])
+            k = int(model_cfg.get("vig_k", 9))
+            cnn_encoder = CNNEncoder3d(in_channels, [int(c) for c in encoder_channels])
+            vig_encoder = ViG3DEncoder(
+                in_channels=in_channels,
+                channels=[int(c) for c in encoder_channels],
+                blocks_per_stage=[int(b) for b in vig_blocks_per_stage],
+                k=k,
+            )
+            fusion = ConcatFusion(
+                [int(c) * 2 for c in encoder_channels], [int(c) for c in encoder_channels]
+            )
+            decoder = UNetDecoder3d([int(c) for c in encoder_channels], num_classes)
+
+            class A2Model(nn.Module):
+                def __init__(self) -> None:
+                    super().__init__()
+                    self.cnn_encoder = cnn_encoder
+                    self.vig_encoder = vig_encoder
+                    self.fusion = fusion
+                    self.decoder = decoder
+
+                def forward(self, x: torch.Tensor) -> torch.Tensor:
+                    cnn_feats = self.cnn_encoder(x)
+                    vig_feats = self.vig_encoder(x)
+                    fused = self.fusion(cnn_feats, vig_feats)
+                    return self.decoder(fused)
+
+            return A2Model()
 
         raise ValueError(f"Unknown model type: {model_type}")

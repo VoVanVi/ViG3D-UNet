@@ -108,5 +108,14 @@ python -m src.train --config configs/brats/a1_vig3d_enc_unet_dec.yaml
 
 To benchmark actual performance, set `train.dry_run: false`, point `data.type` to your NIfTI or NPY dataset config, and increase `train.epochs`. Inspect `runs/<exp_name>/<timestamp>/metrics.csv` for training/validation loss and Dice.
 
+### Step 6: A2 CNN encoder + ViG3D encoder (concat fusion)
+Run the A2 ablation (CNN encoder + ViG3D encoder with concat fusion) with:
+
+```bash
+python -m src.train --config configs/brats/a2_cnn_vig_concat.yaml
+```
+
+Expected output: a run directory under `runs/brats_a2_cnn_vig_concat/<timestamp>/` with logs and (if not dry-run) metrics/checkpoints.
+
 ## Citation
 If you find this repository/work helpful in your research, welcome to cite these papers and give a ⭐.

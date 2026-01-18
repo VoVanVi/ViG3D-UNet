@@ -11,3 +11,4 @@
 - Map BraTS label 4 -> 3 by default to support 4-class training targets.
 - Add a ViG3D-only A0 model factory path and config-driven ablation entrypoint.
 - Add a ViG3D encoder + UNet decoder (A1) with a config-driven model switch.
+- Add a CNN+ViG3D concat fusion (A2) with a config-driven model switch.
