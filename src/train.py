@@ -217,9 +217,16 @@ def main() -> None:
         )
         return
 
-    epochs = int(config.get("train", {}).get("epochs", 1))
+    train_cfg = config.get("train", {})
+    epochs = int(train_cfg.get("epochs", 1))
+    early_stop = train_cfg.get("early_stop", {})
+    patience = int(early_stop.get("patience", 0))
+    min_delta = float(early_stop.get("min_delta", 0.0))
+    monitor = early_stop.get("monitor", "val_dice_mean")
+    mode = early_stop.get("mode", "max")
     metrics_rows: List[Dict[str, float]] = []
-    best_val = float("inf")
+    best_val = float("inf") if mode == "min" else float("-inf")
+    epochs_no_improve = 0
     for epoch in range(1, epochs + 1):
         train_loss = train_one_epoch(model, train_loader, optimizer, criterion, num_classes, device)
         val_metrics = validate(model, val_loader, criterion, num_classes, device)
@@ -238,8 +245,14 @@ def main() -> None:
             run_dir / "checkpoints",
             "last.pt",
         )
-        if val_metrics["val_loss"] < best_val:
-            best_val = val_metrics["val_loss"]
+        current_metric = val_metrics.get(monitor, val_metrics["val_loss"])
+        improved = (
+            (mode == "min" and current_metric < best_val - min_delta)
+            or (mode == "max" and current_metric > best_val + min_delta)
+        )
+        if improved:
+            best_val = current_metric
+            epochs_no_improve = 0
             save_checkpoint(
                 {
                     "epoch": epoch,
@@ -249,6 +262,11 @@ def main() -> None:
                 run_dir / "checkpoints",
                 "best.pt",
             )
+        else:
+            epochs_no_improve += 1
+            if patience > 0 and epochs_no_improve >= patience:
+                logger.info("Early stopping triggered at epoch %d", epoch)
+                break
 
     write_metrics(run_dir / "metrics.csv", metrics_rows)
 

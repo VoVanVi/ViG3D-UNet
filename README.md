@@ -73,6 +73,15 @@ When using Option B, logits are produced at the patch resolution; labels are res
 ### 5. Evaluation
 Metrics are written to `runs/<exp_name>/<timestamp>/metrics.csv`.
 
+Run evaluation on a trained checkpoint:
+
+```bash
+python -m src.test --config configs/brats/a0_vig3d_only.yaml --checkpoint runs/<exp_name>/<timestamp>/checkpoints/best.pt
+```
+
+Evaluation writes a JSON summary with Dice and HD95 metrics.
+For BraTS reporting, the evaluation JSON also includes Dice/HD95 for WT/TC/ET plus their averages.
+
 ### Ablation study guide (Step 9)
 Run a sweep over multiple configs and collect a summary CSV:
 
