@@ -22,7 +22,7 @@ train:
   lr: 0.001
   dry_run: true
   early_stop:
-    patience: 10
+    patience: 15
     min_delta: 0.0
     monitor: val_dice_mean
     mode: max
