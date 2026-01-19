@@ -12,6 +12,13 @@ from src.models.fusion.concat_fusion import ConcatFusion
 from src.models.heads.seg_head import SegmentationHead
 
 
+def _get_vig_stem_cfg(model_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "stem_stride": int(model_cfg.get("vig_stem_stride", 1)),
+        "patch_size": model_cfg.get("vig_patch_size"),
+    }
+
+
 class ModelFactory:
     @staticmethod
     def create(model_cfg: Dict[str, Any]) -> nn.Module:
@@ -24,11 +31,14 @@ class ModelFactory:
             hidden_channels = int(model_cfg.get("vig_hidden_channels", 32))
             num_blocks = int(model_cfg.get("vig_num_blocks", 2))
             k = int(model_cfg.get("vig_k", 9))
+            stem_cfg = _get_vig_stem_cfg(model_cfg)
             backbone = ViG3DBackbone(
                 in_channels=in_channels,
                 hidden_channels=hidden_channels,
                 num_blocks=num_blocks,
                 k=k,
+                stem_stride=stem_cfg["stem_stride"],
+                patch_size=stem_cfg["patch_size"],
             )
             head = SegmentationHead(hidden_channels, num_classes)
             return nn.Sequential(backbone, head)
@@ -39,11 +49,14 @@ class ModelFactory:
             encoder_channels = model_cfg.get("vig_encoder_channels", [16, 32, 64])
             blocks_per_stage = model_cfg.get("vig_blocks_per_stage", [1, 1, 1])
             k = int(model_cfg.get("vig_k", 9))
+            stem_cfg = _get_vig_stem_cfg(model_cfg)
             encoder = ViG3DEncoder(
                 in_channels=in_channels,
                 channels=[int(c) for c in encoder_channels],
                 blocks_per_stage=[int(b) for b in blocks_per_stage],
                 k=k,
+                stem_stride=stem_cfg["stem_stride"],
+                patch_size=stem_cfg["patch_size"],
             )
             decoder = UNetDecoder3d([int(c) for c in encoder_channels], num_classes)
             return nn.Sequential(encoder, decoder)
@@ -54,12 +67,15 @@ class ModelFactory:
             encoder_channels = model_cfg.get("encoder_channels", [16, 32, 64])
             vig_blocks_per_stage = model_cfg.get("vig_blocks_per_stage", [1, 1, 1])
             k = int(model_cfg.get("vig_k", 9))
+            stem_cfg = _get_vig_stem_cfg(model_cfg)
             cnn_encoder = CNNEncoder3d(in_channels, [int(c) for c in encoder_channels])
             vig_encoder = ViG3DEncoder(
                 in_channels=in_channels,
                 channels=[int(c) for c in encoder_channels],
                 blocks_per_stage=[int(b) for b in vig_blocks_per_stage],
                 k=k,
+                stem_stride=stem_cfg["stem_stride"],
+                patch_size=stem_cfg["patch_size"],
             )
             fusion = ConcatFusion(
                 [int(c) * 2 for c in encoder_channels], [int(c) for c in encoder_channels]
@@ -89,12 +105,15 @@ class ModelFactory:
             vig_blocks_per_stage = model_cfg.get("vig_blocks_per_stage", [1, 1, 1])
             k = int(model_cfg.get("vig_k", 9))
             reduction = int(model_cfg.get("attn_reduction", 8))
+            stem_cfg = _get_vig_stem_cfg(model_cfg)
             cnn_encoder = CNNEncoder3d(in_channels, [int(c) for c in encoder_channels])
             vig_encoder = ViG3DEncoder(
                 in_channels=in_channels,
                 channels=[int(c) for c in encoder_channels],
                 blocks_per_stage=[int(b) for b in vig_blocks_per_stage],
                 k=k,
+                stem_stride=stem_cfg["stem_stride"],
+                patch_size=stem_cfg["patch_size"],
             )
             fusion = ChannelAttentionFusion(
                 [int(c) * 2 for c in encoder_channels],
@@ -127,12 +146,15 @@ class ModelFactory:
             k = int(model_cfg.get("vig_k", 9))
             reduction = int(model_cfg.get("attn_reduction", 8))
             texture_skip_levels = int(model_cfg.get("texture_skip_levels", 1))
+            stem_cfg = _get_vig_stem_cfg(model_cfg)
             cnn_encoder = CNNEncoder3d(in_channels, [int(c) for c in encoder_channels])
             vig_encoder = ViG3DEncoder(
                 in_channels=in_channels,
                 channels=[int(c) for c in encoder_channels],
                 blocks_per_stage=[int(b) for b in vig_blocks_per_stage],
                 k=k,
+                stem_stride=stem_cfg["stem_stride"],
+                patch_size=stem_cfg["patch_size"],
             )
             fusion = ChannelAttentionFusion(
                 [int(c) * 2 for c in encoder_channels],

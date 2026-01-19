@@ -16,3 +16,4 @@
 - Add the full A4 model with channel attention and offset (paperclip) decoder.
 - Add a sweep runner and ablation study guide for aggregating runs.
 - Add runtime device/gpu config support and move batches to the selected device.
+- Add ViG3D stem options for downsampled voxel nodes (Option A) or patch-token nodes (Option B).

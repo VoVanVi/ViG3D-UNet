@@ -1,0 +1,29 @@
+exp_name: brats_a0_vig3d_only_opt_b
+output_dir: runs
+seed: 42
+
+data:
+  type: brats_nifti
+  data_root: /home/gpuadmin/Desktop/Kim/TextBraTS/data/TextBraTSData
+  train_split: /home/gpuadmin/Desktop/Kim/TextBraTS/data/train_20.txt
+  val_split: /home/gpuadmin/Desktop/Kim/TextBraTS/data/valid_20.txt
+  batch_size: 1
+  num_workers: 0
+
+model:
+  type: a0_vig3d
+  in_channels: 4
+  num_classes: 4
+  vig_hidden_channels: 8
+  vig_num_blocks: 1
+  vig_k: 3
+  vig_patch_size: 4
+
+train:
+  epochs: 1
+  lr: 0.001
+  dry_run: true
+
+runtime:
+  device: cuda
+  gpu_ids: [0]

@@ -52,6 +52,23 @@ runtime:
   gpu_ids: [0, 1]
 ```
 
+### ViG3D graph node options (A0/A1/A2/A3/A4)
+Option A (downsampled voxel nodes) uses `vig_stem_stride` to downsample before graph construction:
+
+```yaml
+model:
+  vig_stem_stride: 2
+```
+
+Option B (patch-token nodes) uses `vig_patch_size` to tokenize 3D patches before graph construction:
+
+```yaml
+model:
+  vig_patch_size: 4
+```
+
+Do not set both at the same time.
+
 ### 5. Evaluation
 Metrics are written to `runs/<exp_name>/<timestamp>/metrics.csv`.
 
