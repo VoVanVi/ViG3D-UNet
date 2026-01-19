@@ -73,6 +73,8 @@ def train_one_epoch(
         y = y.to(device)
         optimizer.zero_grad()
         preds = model(x)
+        if preds.shape[2:] != y.shape[1:]:
+            y = F.interpolate(y.unsqueeze(1).float(), size=preds.shape[2:], mode="nearest").squeeze(1).long()
         loss = criterion(preds, y) + dice_loss(preds, y, num_classes)
         loss.backward()
         optimizer.step()
@@ -95,6 +97,8 @@ def validate(
             x = x.to(device)
             y = y.to(device)
             preds = model(x)
+            if preds.shape[2:] != y.shape[1:]:
+                y = F.interpolate(y.unsqueeze(1).float(), size=preds.shape[2:], mode="nearest").squeeze(1).long()
             loss = criterion(preds, y) + dice_loss(preds, y, num_classes)
             total_loss += loss.item()
             dice_scores.append(dice_per_class(preds, y, num_classes))
@@ -201,6 +205,8 @@ def main() -> None:
         x = x.to(device)
         y = y.to(device)
         preds = model(x)
+        if preds.shape[2:] != y.shape[1:]:
+            y = F.interpolate(y.unsqueeze(1).float(), size=preds.shape[2:], mode="nearest").squeeze(1).long()
         loss = criterion(preds, y) + dice_loss(preds, y, num_classes)
         dice_scores = dice_per_class(preds, y, num_classes)
         logger.info(

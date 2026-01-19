@@ -68,6 +68,7 @@ model:
 ```
 
 Do not set both at the same time.
+When using Option B, logits are produced at the patch resolution; labels are resized with nearest-neighbor downsampling during training to match the output size.
 
 ### 5. Evaluation
 Metrics are written to `runs/<exp_name>/<timestamp>/metrics.csv`.
