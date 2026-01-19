@@ -23,20 +23,172 @@ IEEE Journal of Biomedical and Health Informatics (https://ieeexplore.ieee.org/d
 
 ## How to use ViG3D-UNet(To be done...)
 ### 1. Requirements
+- Python 3.8+
+- PyTorch, PyYAML, nibabel, numpy (see `requirements.txt`)
 
 ### 2. Installation
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
 ### 3. Inference
+Inference utilities are still under development (WIP).
 
-### 4.Training
+### 4. Training (BraTS WIP)
+Run a single experiment with a config:
 
-### 5.Evaluation
+```bash
+python -m src.train --config configs/brats/a0_vig3d_only.yaml
+```
+
+Use `configs/brats/brats_nifti_example.yaml` or `configs/brats/data_example.yaml` to point at your dataset.
+To use multiple GPUs, set a `runtime` block in your config:
+
+```yaml
+runtime:
+  device: cuda
+  gpu_ids: [0, 1]
+```
+
+### ViG3D graph node options (A0/A1/A2/A3/A4)
+Option A (downsampled voxel nodes) uses `vig_stem_stride` to downsample before graph construction:
+
+```yaml
+model:
+  vig_stem_stride: 2
+```
+
+Option B (patch-token nodes) uses `vig_patch_size` to tokenize 3D patches before graph construction:
+
+```yaml
+model:
+  vig_patch_size: 4
+```
+
+Do not set both at the same time.
+When using Option B, logits are produced at the patch resolution; labels are resized with nearest-neighbor downsampling during training to match the output size.
+
+### 5. Evaluation
+Metrics are written to `runs/<exp_name>/<timestamp>/metrics.csv`.
+
+### Ablation study guide (Step 9)
+Run a sweep over multiple configs and collect a summary CSV:
+
+```bash
+python -m src.experiments.sweep --configs \
+  configs/brats/a0_vig3d_only.yaml \
+  configs/brats/a1_vig3d_enc_unet_dec.yaml \
+  configs/brats/a2_cnn_vig_concat.yaml \
+  configs/brats/a3_cnn_vig_attn.yaml \
+  configs/brats/a4_full_paperclip.yaml
+```
+
+The summary is saved to `runs/sweep_summary.csv` by default.
 
 
 ## Contributions
 **This project is still under development. Please feel free to raise issues or submit pull requests to contribute to our codebase.**
 
 Some insights about 3D CNN module is originated from [nnUNet](https://github.com/MIC-DKFZ/nnUNet) and the 3D Vision GNN(ViG3D) module is originated from [Vision GNN](https://github.com/huawei-noah/Efficient-AI-Backbones).
+
+## BraTS Experiments (WIP)
+The BraTS workflow is under active development with config-driven training runs. Use the dry-run config to verify the pipeline and output layout:
+
+```bash
+python -m src.train --config configs/brats/dry_run.yaml
+```
+
+The dry run writes a run folder under `runs/<exp_name>/<timestamp>/` with a config copy, environment info, and logs. It will log a single batch shape and exit.
+
+### Minimal BraTS NPY layout (Step 2)
+Expect preprocessed NPY files with multi-modal inputs stacked as `(C, D, H, W)` and labels as `(D, H, W)`. The loader matches image/label filenames.
+
+```
+data/brats_npy/
+  train/
+    images/
+      case_001.npy
+    labels/
+      case_001.npy
+  val/
+    images/
+      case_002.npy
+    labels/
+      case_002.npy
+```
+
+Run the data sanity check (dry-run) with:
+
+```bash
+python -m src.train --config configs/brats/data_example.yaml
+```
+
+### BraTS NIfTI layout with split files
+For native BraTS NIfTI folders (e.g., `BraTS20_Training_001`), the dataset loader expects per-case files like:
+
+- `BraTS20_Training_001_t1.nii.gz`
+- `BraTS20_Training_001_t1ce.nii.gz`
+- `BraTS20_Training_001_t2.nii.gz`
+- `BraTS20_Training_001_flair.nii.gz`
+- `BraTS20_Training_001_seg.nii.gz`
+
+Split files should list case directory names (one per line), e.g. `BraTS20_Training_001`. Absolute case paths are also supported, and entries that include the dataset root folder name (e.g. `TextBraTSData/BraTS20_Training_001`) are handled. Both `.nii.gz` and `.nii` extensions are supported by default. Run a dry-run sanity check with:
+
+```bash
+python -m src.train --config configs/brats/brats_nifti_example.yaml
+```
+
+BraTS labels are commonly encoded as 0/1/2/4. The loader maps label 4 -> 3 by default so you can train with `num_classes: 4` without out-of-bounds errors. This can be overridden with `data.label_mapping` in the config.
+
+### Step 3: Loss + metrics (baseline)
+The training loop now uses multiclass Dice + Cross Entropy loss and logs Dice per class plus mean Dice. Dry-run logs the computed loss and mean Dice for a single batch.
+
+### Step 4: A0 ViG3D-only backbone (graph-only)
+Run the A0 ViG3D-only ablation (graph backbone + 1x1x1 segmentation head) with:
+
+```bash
+python -m src.train --config configs/brats/a0_vig3d_only.yaml
+```
+
+Expected output: a run directory under `runs/brats_a0_vig3d_only/<timestamp>/` containing `config.yaml`, `env.txt`, `train_log.txt`, and (if not dry-run) checkpoints + metrics.
+
+### Step 5: A1 ViG3D encoder + UNet decoder
+Run the A1 ablation (ViG3D encoder with UNet-style decoder) with:
+
+```bash
+python -m src.train --config configs/brats/a1_vig3d_enc_unet_dec.yaml
+```
+
+To benchmark actual performance, set `train.dry_run: false`, point `data.type` to your NIfTI or NPY dataset config, and increase `train.epochs`. Inspect `runs/<exp_name>/<timestamp>/metrics.csv` for training/validation loss and Dice.
+
+### Step 6: A2 CNN encoder + ViG3D encoder (concat fusion)
+Run the A2 ablation (CNN encoder + ViG3D encoder with concat fusion) with:
+
+```bash
+python -m src.train --config configs/brats/a2_cnn_vig_concat.yaml
+```
+
+Expected output: a run directory under `runs/brats_a2_cnn_vig_concat/<timestamp>/` with logs and (if not dry-run) metrics/checkpoints.
+
+### Step 7: A3 CNN encoder + ViG3D encoder (channel attention fusion)
+Run the A3 ablation (CNN+ViG3D with channel attention fusion) with:
+
+```bash
+python -m src.train --config configs/brats/a3_cnn_vig_attn.yaml
+```
+
+Expected output: a run directory under `runs/brats_a3_cnn_vig_attn/<timestamp>/` with logs and (if not dry-run) metrics/checkpoints.
+
+### Step 8: A4 full model + offset (paperclip) decoder
+Run the A4 ablation (CNN+ViG3D with channel attention + offset decoder) with:
+
+```bash
+python -m src.train --config configs/brats/a4_full_paperclip.yaml
+```
+
+Expected output: a run directory under `runs/brats_a4_full_paperclip/<timestamp>/` with logs and (if not dry-run) metrics/checkpoints.
 
 ## Citation
 If you find this repository/work helpful in your research, welcome to cite these papers and give a ⭐.
