@@ -1,0 +1,23 @@
+exp_name: brats_a1_vig3d_unet
+output_dir: runs
+seed: 42
+
+data:
+  train_size: 2
+  val_size: 1
+  batch_size: 1
+  num_workers: 0
+  shape: [4, 32, 32, 32]
+
+model:
+  type: a1_vig3d_unet
+  in_channels: 4
+  num_classes: 4
+  vig_encoder_channels: [16, 32, 64]
+  vig_blocks_per_stage: [1, 1, 1]
+  vig_k: 9
+
+train:
+  epochs: 1
+  lr: 0.001
+  dry_run: true

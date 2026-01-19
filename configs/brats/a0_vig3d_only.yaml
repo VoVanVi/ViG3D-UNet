@@ -1,0 +1,32 @@
+exp_name: brats_a0_vig3d_only
+output_dir: runs
+seed: 42
+
+data:
+  train_size: 2
+  val_size: 1
+  batch_size: 1
+  num_workers: 0
+  shape: [4, 16, 16, 16]
+
+model:
+  type: a0_vig3d
+  in_channels: 4
+  num_classes: 4
+  vig_hidden_channels: 16
+  vig_num_blocks: 2
+  vig_k: 9
+
+train:
+  epochs: 1
+  lr: 0.001
+  dry_run: true
+  early_stop:
+    patience: 10
+    min_delta: 0.0
+    monitor: val_dice_mean
+    mode: max
+
+runtime:
+  device: cuda
+  gpu_ids: [0]
