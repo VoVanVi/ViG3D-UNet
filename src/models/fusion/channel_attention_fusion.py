@@ -2,6 +2,7 @@ from typing import List
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class ChannelAttentionFusion(nn.Module):
@@ -30,6 +31,8 @@ class ChannelAttentionFusion(nn.Module):
             raise ValueError("cnn_feats and vig_feats must have the same length")
         fused = []
         for idx, (cnn_feat, vig_feat) in enumerate(zip(cnn_feats, vig_feats)):
+            if cnn_feat.shape[2:] != vig_feat.shape[2:]:
+                vig_feat = F.interpolate(vig_feat, size=cnn_feat.shape[2:], mode="trilinear", align_corners=False)
             x = torch.cat([cnn_feat, vig_feat], dim=1)
             x = self.projections[idx](x)
             pooled = self.pools[idx](x).flatten(1)

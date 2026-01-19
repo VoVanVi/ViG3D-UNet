@@ -3,3 +3,4 @@ pyyaml
 nibabel
 numpy
 scipy
+matplotlib

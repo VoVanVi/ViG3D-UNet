@@ -23,6 +23,10 @@ def dice_per_class(
     return torch.stack(dice_scores)
 
 
+def dice_metrics_as_dict(dice_scores: torch.Tensor) -> List[float]:
+    return [score.item() for score in dice_scores]
+
+
 def dice_loss(
     logits: torch.Tensor,
     targets: torch.Tensor,
