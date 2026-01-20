@@ -46,10 +46,15 @@ def dice_loss(
 def _surface_distances(pred: np.ndarray, target: np.ndarray) -> np.ndarray:
     if pred.sum() == 0 and target.sum() == 0:
         return np.array([0.0])
+    if pred.sum() == 0 or target.sum() == 0:
+        return np.array([0.0])
     pred_surface = pred ^ binary_erosion(pred)
     target_surface = target ^ binary_erosion(target)
     target_dt = distance_transform_edt(~target_surface)
-    return target_dt[pred_surface]
+    distances = target_dt[pred_surface]
+    if distances.size == 0:
+        return np.array([0.0])
+    return distances
 
 
 def hd95_per_class(
@@ -64,7 +69,7 @@ def hd95_per_class(
         pred_mask = preds == cls
         target_mask = targets_np == cls
         distances = _surface_distances(pred_mask, target_mask)
-        hd95_scores.append(np.percentile(distances, 95))
+        hd95_scores.append(float(np.percentile(distances, 95)))
     return torch.tensor(hd95_scores, dtype=torch.float32)
 
 

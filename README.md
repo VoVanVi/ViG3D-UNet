@@ -91,6 +91,7 @@ python -m src.test --config configs/brats/a0_vig3d_only.yaml --checkpoint runs/<
 
 Evaluation writes a JSON summary with Dice and HD95 metrics.
 For BraTS reporting, the evaluation JSON also includes Dice/HD95 for WT/TC/ET plus their averages.
+If a class is missing in either prediction or ground truth, HD95 falls back to 0.0 to avoid empty-distance errors.
 
 ### Visualization
 Generate a quick middle-slice visualization for a checkpoint:

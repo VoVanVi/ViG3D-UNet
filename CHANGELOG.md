@@ -22,3 +22,4 @@
 - Add BraTS region metrics (WT/TC/ET) with mean Dice/HD95 reporting.
 - Add visualization helper and fix ViG fusion shape alignment.
 - Add configurable Dice/CE weights, validation WT/TC/ET logging, and val-loss early stopping defaults.
+- Guard HD95 computation when masks are empty.
