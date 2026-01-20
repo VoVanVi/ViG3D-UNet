@@ -52,6 +52,16 @@ runtime:
   gpu_ids: [0, 1]
 ```
 
+The default loss uses equal Dice and CE weights:
+
+```yaml
+train:
+  loss:
+    lambda_dice: 0.5
+    lambda_ce: 0.5
+  deep_supervision: false
+```
+
 ### ViG3D graph node options (A0/A1/A2/A3/A4)
 Option A (downsampled voxel nodes) uses `vig_stem_stride` to downsample before graph construction:
 

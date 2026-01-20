@@ -21,11 +21,15 @@ train:
   epochs: 1
   lr: 0.001
   dry_run: true
+  loss:
+    lambda_dice: 0.5
+    lambda_ce: 0.5
+  deep_supervision: false
   early_stop:
-    patience: 15
+    patience: 10
     min_delta: 0.0
-    monitor: val_dice_mean
-    mode: max
+    monitor: val_loss
+    mode: min
 
 runtime:
   device: cuda

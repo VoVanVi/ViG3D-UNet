@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,7 +17,7 @@ from src.data.dummy_dataset import RandomVolumeDataset
 from src.models.factory import ModelFactory
 from src.utils.checkpoints import save_checkpoint
 from src.utils.logger import log_environment, setup_logging
-from src.utils.metrics import dice_loss, dice_metrics_as_dict, dice_per_class
+from src.utils.metrics import brats_region_metrics, dice_loss, dice_metrics_as_dict, dice_per_class, hd95_per_class
 from src.utils.seed import get_seed, set_seed
 
 
@@ -58,6 +59,17 @@ def write_metrics(path: Path, rows: List[Dict[str, float]]) -> None:
         writer.writerows(rows)
 
 
+def _compute_loss(
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+    num_classes: int,
+    criterion: nn.Module,
+    lambda_dice: float,
+    lambda_ce: float,
+) -> torch.Tensor:
+    return lambda_dice * dice_loss(logits, targets, num_classes) + lambda_ce * criterion(logits, targets)
+
+
 def train_one_epoch(
     model: nn.Module,
     loader: DataLoader,
@@ -65,6 +77,10 @@ def train_one_epoch(
     criterion: nn.Module,
     num_classes: int,
     device: torch.device,
+    lambda_dice: float,
+    lambda_ce: float,
+    deep_supervision: bool,
+    ds_weights: list,
 ) -> float:
     model.train()
     total_loss = 0.0
@@ -73,9 +89,24 @@ def train_one_epoch(
         y = y.to(device)
         optimizer.zero_grad()
         preds = model(x)
-        if preds.shape[2:] != y.shape[1:]:
-            y = F.interpolate(y.unsqueeze(1).float(), size=preds.shape[2:], mode="nearest").squeeze(1).long()
-        loss = criterion(preds, y) + dice_loss(preds, y, num_classes)
+        if isinstance(preds, (list, tuple)) and deep_supervision:
+            if len(ds_weights) != len(preds):
+                ds_weights = [1.0] * len(preds)
+            loss = 0.0
+            for idx, pred in enumerate(preds):
+                if pred.shape[2:] != y.shape[1:]:
+                    y_resized = F.interpolate(
+                        y.unsqueeze(1).float(), size=pred.shape[2:], mode="nearest"
+                    ).squeeze(1).long()
+                else:
+                    y_resized = y
+                loss = loss + ds_weights[idx] * _compute_loss(
+                    pred, y_resized, num_classes, criterion, lambda_dice, lambda_ce
+                )
+        else:
+            if preds.shape[2:] != y.shape[1:]:
+                y = F.interpolate(y.unsqueeze(1).float(), size=preds.shape[2:], mode="nearest").squeeze(1).long()
+            loss = _compute_loss(preds, y, num_classes, criterion, lambda_dice, lambda_ce)
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
@@ -88,23 +119,45 @@ def validate(
     criterion: nn.Module,
     num_classes: int,
     device: torch.device,
+    lambda_dice: float,
+    lambda_ce: float,
 ) -> Dict[str, float]:
     model.eval()
     total_loss = 0.0
     dice_scores = []
+    hd95_scores = []
+    region_scores = {"WT": {"dice": [], "hd95": []}, "TC": {"dice": [], "hd95": []}, "ET": {"dice": [], "hd95": []}}
     with torch.no_grad():
         for x, y in loader:
             x = x.to(device)
             y = y.to(device)
             preds = model(x)
+            if isinstance(preds, (list, tuple)):
+                preds = preds[0]
             if preds.shape[2:] != y.shape[1:]:
                 y = F.interpolate(y.unsqueeze(1).float(), size=preds.shape[2:], mode="nearest").squeeze(1).long()
-            loss = criterion(preds, y) + dice_loss(preds, y, num_classes)
+            loss = _compute_loss(preds, y, num_classes, criterion, lambda_dice, lambda_ce)
             total_loss += loss.item()
             dice_scores.append(dice_per_class(preds, y, num_classes))
+            hd95_scores.append(hd95_per_class(preds, y, num_classes))
+            region = brats_region_metrics(preds, y)
+            for key in region_scores:
+                region_scores[key]["dice"].append(region[key]["dice"])
+                region_scores[key]["hd95"].append(region[key]["hd95"])
     mean_loss = total_loss / max(1, len(loader))
     dice_tensor = torch.stack(dice_scores).mean(dim=0) if dice_scores else torch.zeros(num_classes)
-    metrics = {"val_loss": mean_loss, "val_dice_mean": dice_tensor.mean().item()}
+    hd95_tensor = torch.stack(hd95_scores).mean(dim=0) if hd95_scores else torch.zeros(num_classes)
+    metrics = {
+        "val_loss": mean_loss,
+        "val_dice_mean": dice_tensor.mean().item(),
+        "val_hd95_mean": hd95_tensor.mean().item(),
+        "val_dice_wt": float(np.mean(region_scores["WT"]["dice"])),
+        "val_dice_tc": float(np.mean(region_scores["TC"]["dice"])),
+        "val_dice_et": float(np.mean(region_scores["ET"]["dice"])),
+        "val_hd95_wt": float(np.mean(region_scores["WT"]["hd95"])),
+        "val_hd95_tc": float(np.mean(region_scores["TC"]["hd95"])),
+        "val_hd95_et": float(np.mean(region_scores["ET"]["hd95"])),
+    }
     for idx, value in enumerate(dice_metrics_as_dict(dice_tensor)):
         metrics[f"val_dice_class_{idx}"] = value
     return metrics
@@ -207,7 +260,7 @@ def main() -> None:
         preds = model(x)
         if preds.shape[2:] != y.shape[1:]:
             y = F.interpolate(y.unsqueeze(1).float(), size=preds.shape[2:], mode="nearest").squeeze(1).long()
-        loss = criterion(preds, y) + dice_loss(preds, y, num_classes)
+        loss = _compute_loss(preds, y, num_classes, criterion, 0.5, 0.5)
         dice_scores = dice_per_class(preds, y, num_classes)
         logger.info(
             "Dry run batch shapes: x=%s y=%s preds=%s", x.shape, y.shape, preds.shape
@@ -219,17 +272,33 @@ def main() -> None:
 
     train_cfg = config.get("train", {})
     epochs = int(train_cfg.get("epochs", 1))
+    loss_cfg = train_cfg.get("loss", {})
+    lambda_dice = float(loss_cfg.get("lambda_dice", 0.5))
+    lambda_ce = float(loss_cfg.get("lambda_ce", 0.5))
+    deep_supervision = bool(train_cfg.get("deep_supervision", False))
+    ds_weights = train_cfg.get("deep_supervision_weights", [1.0])
     early_stop = train_cfg.get("early_stop", {})
     patience = int(early_stop.get("patience", 0))
     min_delta = float(early_stop.get("min_delta", 0.0))
-    monitor = early_stop.get("monitor", "val_dice_mean")
-    mode = early_stop.get("mode", "max")
+    monitor = early_stop.get("monitor", "val_loss")
+    mode = early_stop.get("mode", "min")
     metrics_rows: List[Dict[str, float]] = []
     best_val = float("inf") if mode == "min" else float("-inf")
     epochs_no_improve = 0
     for epoch in range(1, epochs + 1):
-        train_loss = train_one_epoch(model, train_loader, optimizer, criterion, num_classes, device)
-        val_metrics = validate(model, val_loader, criterion, num_classes, device)
+        train_loss = train_one_epoch(
+            model,
+            train_loader,
+            optimizer,
+            criterion,
+            num_classes,
+            device,
+            lambda_dice,
+            lambda_ce,
+            deep_supervision,
+            ds_weights,
+        )
+        val_metrics = validate(model, val_loader, criterion, num_classes, device, lambda_dice, lambda_ce)
         metrics_row = {"epoch": epoch, "train_loss": train_loss}
         metrics_row.update(val_metrics)
         metrics_rows.append(metrics_row)
@@ -239,6 +308,15 @@ def main() -> None:
             train_loss,
             val_metrics["val_loss"],
             val_metrics["val_dice_mean"],
+        )
+        logger.info(
+            "Val Dice WT/TC/ET: %.4f/%.4f/%.4f | Val HD95 WT/TC/ET: %.4f/%.4f/%.4f",
+            val_metrics["val_dice_wt"],
+            val_metrics["val_dice_tc"],
+            val_metrics["val_dice_et"],
+            val_metrics["val_hd95_wt"],
+            val_metrics["val_hd95_tc"],
+            val_metrics["val_hd95_et"],
         )
         save_checkpoint(
             {"epoch": epoch, "state_dict": model.state_dict(), "val_loss": val_metrics["val_loss"]},

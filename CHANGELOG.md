@@ -21,3 +21,4 @@
 - Add early stopping and evaluation script with Dice/HD95 metrics.
 - Add BraTS region metrics (WT/TC/ET) with mean Dice/HD95 reporting.
 - Add visualization helper and fix ViG fusion shape alignment.
+- Add configurable Dice/CE weights, validation WT/TC/ET logging, and val-loss early stopping defaults.
